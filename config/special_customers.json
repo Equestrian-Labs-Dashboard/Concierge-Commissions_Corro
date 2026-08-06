@@ -1,0 +1,11 @@
+{
+  "special_customers": [
+    {
+      "label": "JW / Swede Venture Cost",
+      "shopify_customer_id": "REPLACE_WITH_SHOPIFY_CUSTOMER_ID",
+      "email": "",
+      "commission_rate": 0.01,
+      "enabled": false
+    }
+  ]
+}

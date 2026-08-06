@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "generated": "Waiting for first GitHub Actions run",
+  "generated_iso": null,
+  "lookback_start": null,
+  "lookback_end": null,
+  "valid_rep_tags": [],
+  "special_customer_rule_enabled": false,
+  "subscription_logic": "Exclude only actual subscription orders; customer subscription tags alone are not excluded.",
+  "reps": []
+}

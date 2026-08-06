@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concierge Commissions</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+[data-theme="dark"] {
+  --bg:#0c0c0f; --surface:#141418; --surface2:#1c1c22;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#f0f0f2; --muted:#8888a0; --dim:#55556a;
+  --green:#3ddc84; --green-bg:rgba(61,220,132,0.11);
+  --amber:#ffb347; --amber-bg:rgba(255,179,71,0.11);
+  --red:#ff6b6b;   --red-bg:rgba(255,107,107,0.10);
+  --accent:#3ddc84; --shadow:0 2px 16px rgba(0,0,0,0.5);
+}
+[data-theme="light"] {
+  --bg:#f4f5f7; --surface:#ffffff; --surface2:#f0f1f4;
+  --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.13);
+  --text:#111118; --muted:#666680; --dim:#aaaabc;
+  --green:#1a9a56; --green-bg:rgba(26,154,86,0.09);
+  --amber:#c47a00; --amber-bg:rgba(196,122,0,0.09);
+  --red:#cc3333;   --red-bg:rgba(204,51,51,0.08);
+  --accent:#1a9a56; --shadow:0 2px 16px rgba(0,0,0,0.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;transition:background .25s,color .25s}
+.shell{max-width:1220px;margin:0 auto;padding:28px 20px 64px}
+
+/* HEADER */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:20px}
+.hdr-left h1{font-size:24px;font-weight:800;letter-spacing:-.03em}
+.hdr-left h1 span{color:var(--accent)}
+.hdr-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:3px}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.period-box{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:7px 13px;text-align:right}
+.period-box .wk{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+.period-box .pd{font-size:12px;font-weight:700;margin-top:1px}
+.ctrl-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ctrl-row label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+
+/* TABS */
+.tab-bar{display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:3px}
+.tab{font-family:'DM Mono',monospace;font-size:10px;padding:4px 11px;border-radius:5px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-weight:500;transition:all .15s}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+
+select.sel{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;border-radius:6px;padding:5px 9px;cursor:pointer;min-width:200px}
+.btn{font-family:'DM Mono',monospace;font-size:11px;border-radius:7px;padding:5px 12px;cursor:pointer;border:1px solid;transition:all .15s;font-weight:500}
+.btn-refresh{background:var(--green-bg);border-color:rgba(61,220,132,0.3);color:var(--green)}
+.btn-refresh:hover{filter:brightness(1.15)}
+.btn-refresh:disabled{opacity:.4;cursor:default}
+.btn-theme{background:var(--surface2);border-color:var(--border2);color:var(--muted);font-size:14px;padding:4px 9px;line-height:1}
+.btn-theme:hover{background:var(--surface);color:var(--text)}
+
+/* LOADING / ERROR */
+.loading{text-align:center;padding:80px 20px;font-family:'DM Mono',monospace;color:var(--muted);font-size:12px}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .65s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-box{background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:14px 18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--red);margin-bottom:18px}
+.notice{background:var(--amber-bg);border:1px solid rgba(196,122,0,0.25);border-radius:9px;padding:11px 15px;margin-bottom:22px;font-size:11px;color:var(--amber);font-family:'DM Mono',monospace;line-height:1.7}
+.slbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:9px;font-family:'DM Mono',monospace}
+
+/* RULES */
+.rules-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:26px}
+.rule-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 15px}
+.rule-icon{
+  width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;margin-bottom:8px;
+  background:var(--surface2);border:1px solid var(--border2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
+}
+.rule-lbl{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em}
+.rule-val{font-size:19px;font-weight:800;margin-top:2px}
+.rule-desc{font-size:10px;color:var(--dim);margin-top:3px;line-height:1.4}
+
+/* OVERVIEW TABLE */
+.ov-table{width:100%;border-collapse:collapse;margin-bottom:28px}
+.ov-table thead th{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;padding:6px 11px;text-align:right;border-bottom:1px solid var(--border)}
+.ov-table thead th:first-child{text-align:left}
+.ov-table tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.ov-table tbody tr:hover{background:var(--surface2)}
+.ov-table tbody tr.row-on{background:var(--green-bg)}
+.ov-table td{padding:11px 11px;font-size:12px;text-align:right}
+.ov-table td:first-child{text-align:left}
+.rep-name{font-weight:700;font-size:13px}
+.rep-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+.comm-val{font-weight:700;font-family:'DM Mono',monospace;font-size:13px;color:var(--accent)}
+.mono{font-family:'DM Mono',monospace}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:600;font-family:'DM Mono',monospace}
+.b-new{background:var(--green-bg);color:var(--green)}
+.b-rec{background:var(--amber-bg);color:var(--amber)}
+.b-ex{background:var(--red-bg);color:var(--red)}
+.tfoot-row td{border-top:1px solid var(--border2);padding-top:11px;font-weight:700}
+
+/* DETAIL PANEL */
+.det-panel{display:none;background:var(--surface);border:1px solid var(--border2);border-radius:13px;margin-bottom:22px;overflow:hidden;animation:fadeUp .18s ease}
+.det-panel.open{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
+.ph{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:15px 19px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.ph-rep{font-size:16px;font-weight:800}
+.ph-rep small{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400}
+.ph-metrics{display:flex;gap:22px}
+.pm-val{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;text-align:right}
+.pm-lbl{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;text-align:right}
+.pb{padding:17px 19px}
+.tp{background:var(--surface2);border-radius:10px;padding:12px 15px;margin-bottom:14px}
+.tp-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:12px;font-weight:600}
+.tp-nums{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.pbar-bg{background:var(--border);border-radius:99px;height:5px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#a8ffc8);transition:width .5s ease}
+.tp-sub{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;margin-top:4px}
+.splits{display:flex;gap:9px;margin-bottom:15px}
+.sc{flex:1;background:var(--surface2);border-radius:9px;padding:10px 12px;border:1px solid var(--border)}
+.sc-val{font-size:16px;font-weight:700;font-family:'DM Mono',monospace}
+.sc-lbl{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;margin-top:2px}
+
+/* ORDERS TABLE */
+.ord-table{width:100%;border-collapse:collapse}
+.ord-table thead th{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.ord-table thead th.r{text-align:right}
+.ord-table tbody tr{border-bottom:1px solid var(--border)}
+.ord-table tbody tr.excl{opacity:.5}
+.ord-table td{padding:8px 8px;font-size:11px;vertical-align:middle}
+.ord-table td.r{text-align:right;font-family:'DM Mono',monospace}
+.ord-table td.comm-cell{text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:var(--accent)}
+.ord-table tr.excl td.comm-cell{color:var(--dim)}
+.pname{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cname{font-weight:600;color:var(--text)}
+.oid{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);font-weight:600}
+.odate{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:1px}
+.excl-reason{font-family:'DM Mono',monospace;font-size:9px;color:var(--red);font-weight:600;margin-top:2px}
+.elig-reason{font-family:'DM Mono',monospace;font-size:9px;color:var(--green);font-weight:600;margin-top:2px}
+.tag-list{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+.tag-duo{color:var(--red);font-weight:700}
+.duo-row{background:var(--red-bg)}
+.duo-filter{display:flex;align-items:center;gap:7px;margin:0 0 12px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.duo-filter input{accent-color:var(--accent)}
+
+/* TIER */
+.tier-legend{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:28px}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 12px}
+.tc.hi{border-color:var(--accent);background:var(--green-bg)}
+.tc-e{
+  width:32px;height:32px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;background:var(--surface2);
+  border:1px solid var(--border2);margin-bottom:6px
+}
+.tc-t{font-size:12px;font-weight:700;margin-top:3px}
+.tc-r{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+.tc-p{font-size:10px;color:var(--dim);margin-top:5px;line-height:1.5}
+
+.footer{margin-top:32px;padding:13px 17px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;line-height:1.8}
+.footer span{color:var(--muted)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <h1>Concierge <span>Commissions</span></h1>
+      <div class="hdr-sub">Concierge Sales Channel</div>
+    </div>
+    <div class="hdr-right">
+      <div class="period-box">
+        <div class="wk">period</div>
+        <div class="pd" id="periodLabel">Loading...</div>
+      </div>
+      <div class="ctrl-row">
+        <div class="tab-bar">
+          <button class="tab active" id="tabWeek"  onclick="setMode('week')">By Week</button>
+          <button class="tab"        id="tabMonth" onclick="setMode('month')">By Month</button>
+        </div>
+
+        <div id="weekCtrl">
+          <select class="sel" id="weekSelect" onchange="loadData()">
+            <option value="">Loading weeks...</option>
+          </select>
+        </div>
+
+        <div id="monthCtrl" style="display:none">
+          <select class="sel" id="monthSelect" onchange="loadData()"></select>
+        </div>
+
+        <button class="btn btn-refresh" id="refreshBtn" onclick="loadData(true)">Refresh</button>
+        <button class="btn btn-theme"   id="themeBtn"   onclick="toggleTheme()" title="Toggle theme">Light</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div class="loading"><div class="spinner"></div>Connecting to Shopify...</div>
+  </div>
+
+</div>
+<script>
+var savedTheme = typeof localStorage !== 'undefined' && localStorage.getItem('theme');
+if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+function toggleTheme() {
+  var cur = document.documentElement.getAttribute('data-theme');
+  var next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? 'Light' : 'Dark';
+  try { localStorage.setItem('theme', next); } catch(e){}
+}
+
+var currentMode = 'week';
+var weekOptions = [];
+var rawData = null;
+var currentData = null;
+var activeRep = null;
+var showDuoOnly = false;
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmt(n) { return '$' + Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtDate(iso) { if (!iso) return '—'; var d=new Date(iso); return (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear(); }
+function fmtTags(v) { return v ? escHtml(v) : '—'; }
+function money(n) { return Math.round((Number(n)||0)*100)/100; }
+function localDateKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function mondayOf(d) { var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return x; }
+
+function tierFor(n) {
+  if (n >= 10000) return {e:'💎',name:'Diamond',next:null,nextAmt:0,floor:10000,ceil:99999};
+  if (n >= 5000) return {e:'🏆',name:'Gold',next:'Diamond',nextAmt:10000-n,floor:5000,ceil:10000};
+  if (n >= 2500) return {e:'🥈',name:'Silver',next:'Gold',nextAmt:5000-n,floor:2500,ceil:5000};
+  if (n >= 1000) return {e:'🥉',name:'Bronze',next:'Silver',nextAmt:2500-n,floor:1000,ceil:2500};
+  return {e:'🌱',name:'Starter',next:'Bronze',nextAmt:1000-n,floor:0,ceil:1000};
+}
+function tierPct(n) { var t=tierFor(n),r=t.ceil-t.floor; return r>0?Math.min(100,Math.round((n-t.floor)/r*100)):100; }
+
+function setMode(mode) {
+  currentMode=mode;
+  document.getElementById('tabWeek').classList.toggle('active',mode==='week');
+  document.getElementById('tabMonth').classList.toggle('active',mode==='month');
+  document.getElementById('weekCtrl').style.display=mode==='week'?'':'none';
+  document.getElementById('monthCtrl').style.display=mode==='month'?'':'none';
+  loadData();
+}
+
+function buildPeriodOptions() {
+  var now=new Date();
+  weekOptions=[];
+  var thisMonday=mondayOf(now);
+  var weekSel=document.getElementById('weekSelect'); weekSel.innerHTML='';
+  for (var i=0;i<12;i++) {
+    var mon=new Date(thisMonday); mon.setDate(mon.getDate()-i*7);
+    var sun=new Date(mon); sun.setDate(sun.getDate()+6);
+    var label=(i===0?'This week · ':i===1?'Last week · ':'')+MONTHS[mon.getMonth()].slice(0,3)+' '+mon.getDate()+' – '+MONTHS[sun.getMonth()].slice(0,3)+' '+sun.getDate();
+    weekOptions.push({startISO:localDateKey(mon),endISO:localDateKey(sun),label:label});
+    var opt=document.createElement('option'); opt.value=i; opt.textContent=label; if(i===1)opt.selected=true; weekSel.appendChild(opt);
+  }
+  var monthSel=document.getElementById('monthSelect'); monthSel.innerHTML='';
+  for (var j=0;j<6;j++) {
+    var d=new Date(now.getFullYear(),now.getMonth()-j,1); var y=d.getFullYear(),m=d.getMonth()+1;
+    var mo=document.createElement('option'); mo.value=y+':'+m; mo.textContent=MONTHS[m-1]+' '+y; monthSel.appendChild(mo);
+  }
+}
+
+function selectedRange() {
+  if(currentMode==='week') return weekOptions[parseInt(document.getElementById('weekSelect').value,10)];
+  var parts=document.getElementById('monthSelect').value.split(':');
+  var y=parseInt(parts[0],10),m=parseInt(parts[1],10);
+  var start=new Date(y,m-1,1),end=new Date(y,m,0);
+  return {startISO:localDateKey(start),endISO:localDateKey(end),label:MONTHS[m-1]+' '+y};
+}
+
+function inRange(iso,startISO,endISO) {
+  if(!iso) return false; var key=localDateKey(new Date(iso)); return key>=startISO && key<=endISO;
+}
+
+function aggregateReps(raw,startISO,endISO) {
+  return (raw.reps||[]).map(function(rep){
+    var orders=(rep.orders||[]).filter(function(o){return inRange(o.order_date,startISO,endISO);});
+    var out={rep:rep.rep,orders:orders,gross_sales:0,net_sales:0,new_sales:0,rec_sales:0,special_sales:0,excl_sales:0,commission:0,duo_tag_count:0,duo_tag_combos:[]};
+    var combos={};
+    orders.forEach(function(o){
+      out.gross_sales+=Number(o.gross||0);
+      if(o.rep_tag_warning){out.duo_tag_count++;combos[o.rep_tags]=true;}
+      if(o.type==='Excluded'||o.type==='Return') out.excl_sales+=Number(o.net||0);
+      else {out.net_sales+=Number(o.net||0);out.commission+=Number(o.commission||0);if(o.type==='New')out.new_sales+=Number(o.net||0);else if(o.type==='Recurring')out.rec_sales+=Number(o.net||0);else if(o.type==='Special 1%')out.special_sales+=Number(o.net||0);}
+    });
+    ['gross_sales','net_sales','new_sales','rec_sales','special_sales','excl_sales','commission'].forEach(function(k){out[k]=money(out[k]);});
+    out.duo_tag_combos=Object.keys(combos).sort(); return out;
+  }).filter(function(r){return r.orders.length>0;});
+}
+
+async function loadData(force) {
+  var btn=document.getElementById('refreshBtn'); btn.disabled=true; btn.textContent='Loading';
+  try {
+    if(!rawData || force) {
+      var response=await fetch('data/dashboard.json?ts='+(force?Date.now():'stable'),{cache:force?'no-store':'default'});
+      if(!response.ok) throw new Error('Could not load dashboard data (HTTP '+response.status+')');
+      rawData=await response.json();
+    }
+    var range=selectedRange();
+    currentData={
+      ok:true,generated:rawData.generated,period_label:range.label,valid_rep_tags:rawData.valid_rep_tags||[],
+      special_customer_rule_enabled:!!rawData.special_customer_rule_enabled,
+      reps:aggregateReps(rawData,range.startISO,range.endISO)
+    };
+    document.getElementById('periodLabel').textContent=range.label;
+    activeRep=null; renderDashboard(currentData);
+  } catch(err) {
+    document.getElementById('main').innerHTML='<div class="err-box">Error: '+escHtml(err.message)+'</div>';
+  } finally { btn.disabled=false; btn.textContent='Refresh'; }
+}
+
+function renderDashboard(data) {
+  var reps=data.reps||[],totGross=0,totNet=0,totNew=0,totRec=0,totSpecial=0,totExcl=0,totComm=0,totDuo=0;
+  var rows=reps.map(function(d,i){
+    totGross+=d.gross_sales;totNet+=d.net_sales;totNew+=d.new_sales;totRec+=d.rec_sales;totSpecial+=d.special_sales;totExcl+=d.excl_sales;totComm+=d.commission;totDuo+=d.duo_tag_count||0;
+    var t=tierFor(d.net_sales);
+    return '<tr onclick="togglePanel('+i+')" id="row-'+i+'"><td><div class="rep-name">'+escHtml(d.rep)+'</div><div class="rep-sub">'+t.e+' '+t.name+'</div></td>'+
+      '<td class="mono">'+fmt(d.gross_sales)+'</td><td class="mono">'+fmt(d.net_sales)+'</td><td><span class="badge b-new">12%</span> <span class="mono">'+fmt(d.new_sales)+'</span></td>'+
+      '<td><span class="badge b-rec">8%</span> <span class="mono">'+fmt(d.rec_sales)+'</span></td><td><span class="badge" style="background:var(--surface2);color:var(--text)">1%</span> <span class="mono">'+fmt(d.special_sales)+'</span></td>'+
+      '<td class="mono" style="color:var(--dim)">'+(d.excl_sales>0?fmt(d.excl_sales):'—')+'</td><td class="tag-list '+(d.duo_tag_count>0?'tag-duo':'')+'">'+(d.duo_tag_combos.length?escHtml(d.duo_tag_combos.join(' | ')):'—')+'</td><td class="comm-val">'+fmt(d.commission)+'</td></tr>';
+  }).join('');
+  document.getElementById('main').innerHTML=''
+    +'<div class="notice"><b>Subscription rule:</b> A customer subscription tag alone does not exclude the sale. Only an actual subscription order detected by an exact order tag or line-item selling plan is excluded at 0%.<br>'
+    +'<b>JW / Swede Venture:</b> The configured customer ID/email earns 1% on eligible one-time purchases. Actual subscription orders, CJ Affiliate orders, returns, and other hard exclusions remain at 0%.<br>'
+    +'<b>Commission Eligible:</b> <i>commissioneligible</i> overrides product-level Drop Ship, Collective, or Autoship only.<br><b>Active Rep Tags:</b> '+escHtml(data.valid_rep_tags.join(', '))+'<br>Last data update: '+escHtml(data.generated)+'</div>'
+    +'<div class="slbl">Commission Rules</div><div class="rules-grid">'
+    +'<div class="rule-card"><div class="rule-lbl">New Customer</div><div class="rule-val" style="color:var(--green)">12%</div><div class="rule-desc">First historical order</div></div>'
+    +'<div class="rule-card"><div class="rule-lbl">Recurring</div><div class="rule-val" style="color:var(--amber)">8%</div><div class="rule-desc">Customer has prior orders</div></div>'
+    +'<div class="rule-card"><div class="rule-lbl">JW / Swede Venture</div><div class="rule-val">1%</div><div class="rule-desc">Configured customer only</div></div>'
+    +'<div class="rule-card"><div class="rule-lbl">Actual Subscription / Excluded</div><div class="rule-val" style="color:var(--dim)">0%</div><div class="rule-desc">Subscription order, CJ, returns, and hard exclusions</div></div></div>'
+    +'<div class="slbl">Summary — Select a Rep for Details</div><table class="ov-table"><thead><tr><th>Rep</th><th>Gross Sales</th><th>Net Sales</th><th>New (12%)</th><th>Recurring (8%)</th><th>Special (1%)</th><th>Excluded / Returns</th><th>Duo Tags</th><th>Commission</th></tr></thead><tbody>'+rows+'</tbody>'
+    +'<tfoot><tr class="tfoot-row"><td>TOTAL · '+reps.length+' reps</td><td class="mono">'+fmt(totGross)+'</td><td class="mono">'+fmt(totNet)+'</td><td class="mono">'+fmt(totNew)+'</td><td class="mono">'+fmt(totRec)+'</td><td class="mono">'+fmt(totSpecial)+'</td><td class="mono">'+fmt(totExcl)+'</td><td class="tag-list '+(totDuo>0?'tag-duo':'')+'">'+(totDuo?totDuo+' line(s)':'—')+'</td><td class="comm-val">'+fmt(totComm)+'</td></tr></tfoot></table>'
+    +'<div class="det-panel" id="detailPanel"></div><div class="footer"><span>Secure architecture:</span> Shopify credentials remain in GitHub Actions Secrets. GitHub Pages receives only the generated commission data required by this report.<br><span>Subscription:</span> customer tags are not used as automatic exclusion. Exact order/line subscription evidence is required.<br><span>Data source:</span> Shopify Admin API · '+escHtml(data.generated)+'</div>';
+}
+
+function toggleDuoOnly(){showDuoOnly=!!document.getElementById('duoOnlyChk').checked;if(activeRep!==null)togglePanel(activeRep,true);}
+function togglePanel(idx,forceOpen) {
+  var panel=document.getElementById('detailPanel'),rows=document.querySelectorAll('.ov-table tbody tr'),d=currentData.reps[idx];
+  if(activeRep===idx&&!forceOpen){panel.classList.remove('open');rows.forEach(function(r){r.classList.remove('row-on');});activeRep=null;return;}
+  activeRep=idx;rows.forEach(function(r,i){r.classList.toggle('row-on',i===idx);});
+  var t=tierFor(d.net_sales),pct=tierPct(d.net_sales),displayOrders=showDuoOnly?d.orders.filter(function(o){return !!o.rep_tag_warning;}):d.orders;
+  var orows=displayOrders.map(function(o){
+    var isEx=o.type==='Excluded'||o.type==='Return';
+    var badge=o.type==='New'?'<span class="badge b-new">New 12%</span>':o.type==='Recurring'?'<span class="badge b-rec">Recurring 8%</span>':o.type==='Special 1%'?'<span class="badge" style="background:var(--surface2);color:var(--text)">Special 1%</span>':o.type==='Return'?'<span class="badge b-ex">Return</span>':'<span class="badge b-ex">Excluded</span>';
+    var reason=o.exclusion_reason?'<div class="excl-reason">Reason: '+escHtml(o.exclusion_reason)+'</div>':'';
+    var elig=o.eligible_reason?'<div class="elig-reason">Eligible: '+escHtml(o.eligible_reason)+'</div>':'';
+    return '<tr class="'+((isEx?'excl ':'')+(o.rep_tag_warning?'duo-row':''))+'"><td class="r"><div class="oid">'+escHtml(o.order_id)+'</div></td><td><div class="odate">'+fmtDate(o.order_date)+'</div></td><td><div class="cname">'+escHtml(o.customer||'N/A')+'</div></td><td><div class="'+(o.rep_tag_warning?'tag-list tag-duo':'tag-list')+'">'+fmtTags(o.customer_rep_tags||o.rep_tags)+'</div></td><td><div class="pname" title="'+escHtml(o.product)+'">'+escHtml(o.product)+'</div>'+reason+elig+'</td><td>'+badge+'</td><td class="r">'+fmt(o.gross)+'</td><td class="r">'+fmt(o.net)+'</td><td class="r">'+(o.rate>0?(o.rate*100).toFixed(0)+'%':'—')+'</td><td class="comm-cell">'+(o.commission>0?fmt(o.commission):'—')+'</td></tr>';
+  }).join('');
+  panel.innerHTML='<div class="ph"><div class="ph-rep">'+t.e+' '+escHtml(d.rep)+' <small>· '+t.name+'</small></div><div class="ph-metrics"><div><div class="pm-val">'+fmt(d.gross_sales)+'</div><div class="pm-lbl">Gross Sales</div></div><div><div class="pm-val">'+fmt(d.net_sales)+'</div><div class="pm-lbl">Net Sales</div></div><div><div class="pm-val" style="color:var(--accent)">'+fmt(d.commission)+'</div><div class="pm-lbl">Commission</div></div></div></div>'
+    +'<div class="pb"><div class="tp"><div class="tp-hdr"><span>'+t.e+' '+t.name+'</span><span class="tp-nums">'+fmt(d.net_sales)+' / '+(t.next?'$'+t.ceil.toLocaleString():'max')+'</span></div><div class="pbar-bg"><div class="pbar-fill" style="width:'+pct+'%"></div></div></div>'
+    +'<div class="splits"><div class="sc"><div class="sc-val" style="color:var(--green)">'+fmt(d.new_sales)+'</div><div class="sc-lbl">New 12% · '+fmt(d.new_sales*.12)+'</div></div><div class="sc"><div class="sc-val" style="color:var(--amber)">'+fmt(d.rec_sales)+'</div><div class="sc-lbl">Recurring 8% · '+fmt(d.rec_sales*.08)+'</div></div><div class="sc"><div class="sc-val">'+fmt(d.special_sales)+'</div><div class="sc-lbl">Special 1% · '+fmt(d.special_sales*.01)+'</div></div><div class="sc"><div class="sc-val" style="color:var(--dim)">'+fmt(d.excl_sales)+'</div><div class="sc-lbl">Excluded / Returns · $0</div></div></div>'
+    +'<div class="duo-filter"><label><input type="checkbox" id="duoOnlyChk" onchange="toggleDuoOnly()" '+(showDuoOnly?'checked':'')+'> Show Duo Customer Tags only</label></div><div class="slbl">Orders in Period</div><table class="ord-table"><thead><tr><th class="r">Order #</th><th>Date</th><th>Customer</th><th>Customer Tag</th><th>Product</th><th>Type</th><th class="r">Gross</th><th class="r">Net</th><th class="r">Rate</th><th class="r">Commission</th></tr></thead><tbody>'+orows+'</tbody></table></div>';
+  panel.classList.add('open');panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+buildPeriodOptions();
+(function(){var t=document.documentElement.getAttribute('data-theme');document.getElementById('themeBtn').textContent=t==='dark'?'Light':'Dark';})();
+loadData(false);
+</script>
+</body>
+</html>
