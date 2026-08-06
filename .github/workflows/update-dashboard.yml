@@ -53,18 +53,6 @@ jobs:
           REP_TAGS_START_ROW: "2"
         run: python scripts/build_dashboard.py
 
-      - name: Commit refreshed dashboard data
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data/dashboard.json
-          if git diff --cached --quiet; then
-            echo "No dashboard data changes to commit."
-          else
-            git commit -m "Update concierge dashboard data"
-            git push
-          fi
-
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -76,3 +64,15 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Commit refreshed dashboard data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/dashboard.json
+          if git diff --cached --quiet; then
+            echo "No dashboard data changes to commit."
+          else
+            git commit -m "Update concierge dashboard data"
+            git push
+          fi
