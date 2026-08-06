@@ -62,7 +62,7 @@ select.sel{background:var(--surface2);border:1px solid var(--border2);color:var(
 .slbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:9px;font-family:'DM Mono',monospace}
 
 /* RULES */
-.rules-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:26px}
+.rules-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:26px}
 .rule-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 15px}
 .rule-icon{
   width:34px;height:34px;border-radius:10px;
@@ -92,6 +92,7 @@ select.sel{background:var(--surface2);border:1px solid var(--border2);color:var(
 .b-new{background:var(--green-bg);color:var(--green)}
 .b-rec{background:var(--amber-bg);color:var(--amber)}
 .b-ex{background:var(--red-bg);color:var(--red)}
+.b-special{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
 .tfoot-row td{border-top:1px solid var(--border2);padding-top:11px;font-weight:700}
 
 /* DETAIL PANEL */
@@ -111,7 +112,7 @@ select.sel{background:var(--surface2);border:1px solid var(--border2);color:var(
 .pbar-bg{background:var(--border);border-radius:99px;height:5px;overflow:hidden}
 .pbar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#a8ffc8);transition:width .5s ease}
 .tp-sub{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;margin-top:4px}
-.splits{display:flex;gap:9px;margin-bottom:15px}
+.splits{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:15px}
 .sc{flex:1;background:var(--surface2);border-radius:9px;padding:10px 12px;border:1px solid var(--border)}
 .sc-val{font-size:16px;font-weight:700;font-family:'DM Mono',monospace}
 .sc-lbl{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;margin-top:2px}
@@ -157,6 +158,7 @@ select.sel{background:var(--surface2);border:1px solid var(--border2);color:var(
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+@media(max-width:900px){.rules-grid{grid-template-columns:repeat(2,1fr)}.tier-legend{grid-template-columns:repeat(2,1fr)}.ov-table{display:block;overflow-x:auto}.splits{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -188,7 +190,7 @@ select.sel{background:var(--surface2);border:1px solid var(--border2);color:var(
           <select class="sel" id="monthSelect" onchange="loadData()"></select>
         </div>
 
-        <button class="btn btn-refresh" id="refreshBtn" onclick="loadData(true)">Refresh</button>
+        <button class="btn btn-refresh" id="refreshBtn" onclick="loadData()">Refresh</button>
         <button class="btn btn-theme"   id="themeBtn"   onclick="toggleTheme()" title="Toggle theme">Light</button>
       </div>
     </div>
@@ -209,158 +211,133 @@ function toggleTheme() {
   document.getElementById('themeBtn').textContent = next === 'dark' ? 'Light' : 'Dark';
   try { localStorage.setItem('theme', next); } catch(e){}
 }
+(function(){ var t=document.documentElement.getAttribute('data-theme'); var b=document.getElementById('themeBtn'); if(b)b.textContent=t==='dark'?'Light':'Dark'; })();
 
-var currentMode = 'week';
-var weekOptions = [];
-var rawData = null;
-var currentData = null;
-var activeRep = null;
-var showDuoOnly = false;
-var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var currentMode='week', weekOptions=[], activeRep=null, currentData=null, rawData=null, showDuoOnly=false, isLoading=false;
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-function escHtml(v) {
-  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function isoDayLocal(d){
+  var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
 }
-function fmt(n) { return '$' + Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-function fmtDate(iso) { if (!iso) return '—'; var d=new Date(iso); return (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear(); }
-function fmtTags(v) { return v ? escHtml(v) : '—'; }
-function money(n) { return Math.round((Number(n)||0)*100)/100; }
-function localDateKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function mondayOf(d) { var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return x; }
-
-function tierFor(n) {
-  if (n >= 10000) return {e:'💎',name:'Diamond',next:null,nextAmt:0,floor:10000,ceil:99999};
-  if (n >= 5000) return {e:'🏆',name:'Gold',next:'Diamond',nextAmt:10000-n,floor:5000,ceil:10000};
-  if (n >= 2500) return {e:'🥈',name:'Silver',next:'Gold',nextAmt:5000-n,floor:2500,ceil:5000};
-  if (n >= 1000) return {e:'🥉',name:'Bronze',next:'Silver',nextAmt:2500-n,floor:1000,ceil:2500};
-  return {e:'🌱',name:'Starter',next:'Bronze',nextAmt:1000-n,floor:0,ceil:1000};
+function fmtShort(d){return MONTHS[d.getMonth()].slice(0,3)+' '+d.getDate();}
+function buildWeekOptions(){
+  var now=new Date(), day=now.getDay(), diff=day===0?6:day-1;
+  var monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-diff);
+  weekOptions=[];
+  for(var i=0;i<12;i++){
+    var mon=new Date(monday.getTime()-i*7*86400000), sun=new Date(mon.getTime()+6*86400000);
+    var label=fmtShort(mon)+' – '+fmtShort(sun);
+    if(i===0)label='This week · '+label;
+    if(i===1)label='Last week · '+label;
+    weekOptions.push({label:label,startISO:isoDayLocal(mon),endISO:isoDayLocal(sun)});
+  }
+  var sel=document.getElementById('weekSelect'); sel.innerHTML='';
+  weekOptions.forEach(function(o,i){var opt=document.createElement('option');opt.value=i;opt.textContent=o.label;if(i===1)opt.selected=true;sel.appendChild(opt);});
 }
-function tierPct(n) { var t=tierFor(n),r=t.ceil-t.floor; return r>0?Math.min(100,Math.round((n-t.floor)/r*100)):100; }
-
-function setMode(mode) {
+function buildMonthOptions(){
+  var now=new Date(),sel=document.getElementById('monthSelect');sel.innerHTML='';
+  for(var i=0;i<6;i++){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1),y=d.getFullYear(),m=d.getMonth()+1;
+    var opt=document.createElement('option');opt.value=y+':'+m;opt.textContent=MONTHS[m-1]+' '+y;if(i===0)opt.selected=true;sel.appendChild(opt);
+  }
+}
+function setMode(mode){
   currentMode=mode;
   document.getElementById('tabWeek').classList.toggle('active',mode==='week');
   document.getElementById('tabMonth').classList.toggle('active',mode==='month');
   document.getElementById('weekCtrl').style.display=mode==='week'?'':'none';
   document.getElementById('monthCtrl').style.display=mode==='month'?'':'none';
-  loadData();
+  loadData(false);
 }
-
-function buildPeriodOptions() {
-  var now=new Date();
-  weekOptions=[];
-  var thisMonday=mondayOf(now);
-  var weekSel=document.getElementById('weekSelect'); weekSel.innerHTML='';
-  for (var i=0;i<12;i++) {
-    var mon=new Date(thisMonday); mon.setDate(mon.getDate()-i*7);
-    var sun=new Date(mon); sun.setDate(sun.getDate()+6);
-    var label=(i===0?'This week · ':i===1?'Last week · ':'')+MONTHS[mon.getMonth()].slice(0,3)+' '+mon.getDate()+' – '+MONTHS[sun.getMonth()].slice(0,3)+' '+sun.getDate();
-    weekOptions.push({startISO:localDateKey(mon),endISO:localDateKey(sun),label:label});
-    var opt=document.createElement('option'); opt.value=i; opt.textContent=label; if(i===1)opt.selected=true; weekSel.appendChild(opt);
+function selectedRange(){
+  if(currentMode==='week'){
+    var w=weekOptions[parseInt(document.getElementById('weekSelect').value||'0',10)];
+    return {start:w.startISO,end:w.endISO,label:w.label};
   }
-  var monthSel=document.getElementById('monthSelect'); monthSel.innerHTML='';
-  for (var j=0;j<6;j++) {
-    var d=new Date(now.getFullYear(),now.getMonth()-j,1); var y=d.getFullYear(),m=d.getMonth()+1;
-    var mo=document.createElement('option'); mo.value=y+':'+m; mo.textContent=MONTHS[m-1]+' '+y; monthSel.appendChild(mo);
-  }
+  var parts=document.getElementById('monthSelect').value.split(':'),y=parseInt(parts[0],10),m=parseInt(parts[1],10);
+  return {start:y+'-'+String(m).padStart(2,'0')+'-01',end:isoDayLocal(new Date(y,m,0)),label:MONTHS[m-1]+' '+y};
 }
-
-function selectedRange() {
-  if(currentMode==='week') return weekOptions[parseInt(document.getElementById('weekSelect').value,10)];
-  var parts=document.getElementById('monthSelect').value.split(':');
-  var y=parseInt(parts[0],10),m=parseInt(parts[1],10);
-  var start=new Date(y,m-1,1),end=new Date(y,m,0);
-  return {startISO:localDateKey(start),endISO:localDateKey(end),label:MONTHS[m-1]+' '+y};
-}
-
-function inRange(iso,startISO,endISO) {
-  if(!iso) return false; var key=localDateKey(new Date(iso)); return key>=startISO && key<=endISO;
-}
-
-function aggregateReps(raw,startISO,endISO) {
-  return (raw.reps||[]).map(function(rep){
-    var orders=(rep.orders||[]).filter(function(o){return inRange(o.order_date,startISO,endISO);});
-    var out={rep:rep.rep,orders:orders,gross_sales:0,net_sales:0,new_sales:0,rec_sales:0,special_sales:0,excl_sales:0,commission:0,duo_tag_count:0,duo_tag_combos:[]};
+function orderDay(iso){ return String(iso||'').slice(0,10); }
+function aggregatePeriod(payload,range){
+  var reps=[];
+  (payload.reps||[]).forEach(function(rep){
+    var orders=(rep.orders||[]).filter(function(o){var d=orderDay(o.order_date);return d>=range.start&&d<=range.end;});
+    if(!orders.length)return;
+    var d={rep:rep.rep,orders:orders,gross_sales:0,net_sales:0,new_sales:0,rec_sales:0,special_sales:0,excl_sales:0,commission:0,duo_tag_count:0,duo_tag_combos:[]};
     var combos={};
     orders.forEach(function(o){
-      out.gross_sales+=Number(o.gross||0);
-      if(o.rep_tag_warning){out.duo_tag_count++;combos[o.rep_tags]=true;}
-      if(o.type==='Excluded'||o.type==='Return') out.excl_sales+=Number(o.net||0);
-      else {out.net_sales+=Number(o.net||0);out.commission+=Number(o.commission||0);if(o.type==='New')out.new_sales+=Number(o.net||0);else if(o.type==='Recurring')out.rec_sales+=Number(o.net||0);else if(o.type==='Special 1%')out.special_sales+=Number(o.net||0);}
+      d.gross_sales+=Number(o.gross||0);
+      if(o.rep_tag_warning){d.duo_tag_count++;if(o.rep_tags)combos[o.rep_tags]=true;}
+      if(o.type==='Excluded'||o.type==='Return')d.excl_sales+=Number(o.net||0);
+      else{
+        d.net_sales+=Number(o.net||0);d.commission+=Number(o.commission||0);
+        if(o.type==='New')d.new_sales+=Number(o.net||0);
+        else if(o.type==='Recurring')d.rec_sales+=Number(o.net||0);
+        else if(o.type==='Special 1%')d.special_sales+=Number(o.net||0);
+      }
     });
-    ['gross_sales','net_sales','new_sales','rec_sales','special_sales','excl_sales','commission'].forEach(function(k){out[k]=money(out[k]);});
-    out.duo_tag_combos=Object.keys(combos).sort(); return out;
-  }).filter(function(r){return r.orders.length>0;});
+    ['gross_sales','net_sales','new_sales','rec_sales','special_sales','excl_sales','commission'].forEach(function(k){d[k]=Math.round(d[k]*100)/100;});
+    d.duo_tag_combos=Object.keys(combos).sort(); reps.push(d);
+  });
+  reps.sort(function(a,b){return a.rep.localeCompare(b.rep);});
+  return {ok:true,generated:payload.generated,from_cache:false,period_label:range.label,valid_rep_tags:payload.valid_rep_tags||[],special_customer_rule_enabled:!!payload.special_customer_rule_enabled,reps:reps};
 }
-
-async function loadData(force) {
-  var btn=document.getElementById('refreshBtn'); btn.disabled=true; btn.textContent='Loading';
-  try {
-    if(!rawData || force) {
-      var response=await fetch('data/dashboard.json?ts='+(force?Date.now():'stable'),{cache:force?'no-store':'default'});
-      if(!response.ok) throw new Error('Could not load dashboard data (HTTP '+response.status+')');
-      rawData=await response.json();
-    }
-    var range=selectedRange();
-    currentData={
-      ok:true,generated:rawData.generated,period_label:range.label,valid_rep_tags:rawData.valid_rep_tags||[],
-      special_customer_rule_enabled:!!rawData.special_customer_rule_enabled,
-      reps:aggregateReps(rawData,range.startISO,range.endISO)
-    };
-    document.getElementById('periodLabel').textContent=range.label;
-    activeRep=null; renderDashboard(currentData);
-  } catch(err) {
-    document.getElementById('main').innerHTML='<div class="err-box">Error: '+escHtml(err.message)+'</div>';
-  } finally { btn.disabled=false; btn.textContent='Refresh'; }
+async function fetchDashboard(force){
+  var url='data/dashboard.json?v='+Date.now();
+  var response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error('dashboard.json returned HTTP '+response.status);
+  var data=await response.json();
+  if(!data.ok)throw new Error(data.error||'Invalid dashboard data');
+  return data;
 }
-
-function renderDashboard(data) {
+async function loadData(force){
+  if(isLoading)return;isLoading=true;
+  var btn=document.getElementById('refreshBtn');btn.disabled=true;btn.textContent='Loading';
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div>Loading commission data...</div>';activeRep=null;
+  try{
+    if(!rawData||force)rawData=await fetchDashboard(!!force);
+    currentData=aggregatePeriod(rawData,selectedRange());
+    document.getElementById('periodLabel').textContent=currentData.period_label;
+    renderDashboard(currentData);
+  }catch(err){document.getElementById('main').innerHTML='<div class="err-box">Error: '+escHtml(err.message)+'</div>';}
+  finally{isLoading=false;btn.disabled=false;btn.textContent='Refresh';}
+}
+function escHtml(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function fmt(n){return '$'+Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function fmtDate(iso){if(!iso)return '—';var d=new Date(iso);return (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();}
+function fmtTags(v){return v?escHtml(v):'—';}
+function toggleDuoOnly(){showDuoOnly=!!document.getElementById('duoOnlyChk').checked;if(activeRep!==null)togglePanel(activeRep,true);}
+function tierFor(n){if(n>=10000)return{e:'💎',name:'Diamond',next:null,nextAmt:0,floor:10000,ceil:99999};if(n>=5000)return{e:'🏆',name:'Gold',next:'Diamond',nextAmt:10000-n,floor:5000,ceil:10000};if(n>=2500)return{e:'🥈',name:'Silver',next:'Gold',nextAmt:5000-n,floor:2500,ceil:5000};if(n>=1000)return{e:'🥉',name:'Bronze',next:'Silver',nextAmt:2500-n,floor:1000,ceil:2500};return{e:'🌱',name:'Starter',next:'Bronze',nextAmt:1000-n,floor:0,ceil:1000};}
+function tierPct(n){var t=tierFor(n),r=t.ceil-t.floor;return r>0?Math.min(100,Math.round((n-t.floor)/r*100)):100;}
+function renderDashboard(data){
   var reps=data.reps||[],totGross=0,totNet=0,totNew=0,totRec=0,totSpecial=0,totExcl=0,totComm=0,totDuo=0;
-  var rows=reps.map(function(d,i){
-    totGross+=d.gross_sales;totNet+=d.net_sales;totNew+=d.new_sales;totRec+=d.rec_sales;totSpecial+=d.special_sales;totExcl+=d.excl_sales;totComm+=d.commission;totDuo+=d.duo_tag_count||0;
-    var t=tierFor(d.net_sales);
-    return '<tr onclick="togglePanel('+i+')" id="row-'+i+'"><td><div class="rep-name">'+escHtml(d.rep)+'</div><div class="rep-sub">'+t.e+' '+t.name+'</div></td>'+
-      '<td class="mono">'+fmt(d.gross_sales)+'</td><td class="mono">'+fmt(d.net_sales)+'</td><td><span class="badge b-new">12%</span> <span class="mono">'+fmt(d.new_sales)+'</span></td>'+
-      '<td><span class="badge b-rec">8%</span> <span class="mono">'+fmt(d.rec_sales)+'</span></td><td><span class="badge" style="background:var(--surface2);color:var(--text)">1%</span> <span class="mono">'+fmt(d.special_sales)+'</span></td>'+
-      '<td class="mono" style="color:var(--dim)">'+(d.excl_sales>0?fmt(d.excl_sales):'—')+'</td><td class="tag-list '+(d.duo_tag_count>0?'tag-duo':'')+'">'+(d.duo_tag_combos.length?escHtml(d.duo_tag_combos.join(' | ')):'—')+'</td><td class="comm-val">'+fmt(d.commission)+'</td></tr>';
+  var rows=reps.map(function(d,i){totGross+=d.gross_sales||0;totNet+=d.net_sales||0;totNew+=d.new_sales||0;totRec+=d.rec_sales||0;totSpecial+=d.special_sales||0;totExcl+=d.excl_sales||0;totComm+=d.commission||0;totDuo+=d.duo_tag_count||0;var t=tierFor(d.net_sales);
+    return '<tr onclick="togglePanel('+i+')" id="row-'+i+'"><td><div class="rep-name">'+escHtml(d.rep)+'</div><div class="rep-sub">'+t.e+' '+t.name+'</div></td><td class="mono">'+fmt(d.gross_sales)+'</td><td class="mono">'+fmt(d.net_sales)+'</td><td><span class="badge b-new">12%</span> <span class="mono">'+fmt(d.new_sales)+'</span></td><td><span class="badge b-rec">8%</span> <span class="mono">'+fmt(d.rec_sales)+'</span></td><td><span class="badge b-special">1%</span> <span class="mono">'+fmt(d.special_sales)+'</span></td><td class="mono" style="color:var(--dim)">'+(d.excl_sales>0?fmt(d.excl_sales):'—')+'</td><td class="tag-list '+(d.duo_tag_count>0?'tag-duo':'')+'">'+(d.duo_tag_combos.length?escHtml(d.duo_tag_combos.join(' | ')):'—')+'</td><td class="comm-val">'+fmt(d.commission)+'</td></tr>';
   }).join('');
   document.getElementById('main').innerHTML=''
-    +'<div class="notice"><b>Subscription rule:</b> A customer subscription tag alone does not exclude the sale. Only an actual subscription order detected by an exact order tag or line-item selling plan is excluded at 0%.<br>'
-    +'<b>JW / Swede Venture:</b> The configured customer ID/email earns 1% on eligible one-time purchases. Actual subscription orders, CJ Affiliate orders, returns, and other hard exclusions remain at 0%.<br>'
-    +'<b>Commission Eligible:</b> <i>commissioneligible</i> overrides product-level Drop Ship, Collective, or Autoship only.<br><b>Active Rep Tags:</b> '+escHtml(data.valid_rep_tags.join(', '))+'<br>Last data update: '+escHtml(data.generated)+'</div>'
+    +'<div class="notice"><b>Subscription rule:</b> A customer subscription tag alone does not exclude a sale. Only an actual subscription order detected by an exact order tag or line-item selling plan is excluded at 0%.<br><b>JW / Swede Venture:</b> The configured customer ID/email earns 1% on eligible purchases. Actual subscription orders, CJ Affiliate orders, returns, and hard exclusions remain at 0%.<br><b>Commission Eligible:</b> <i>commissioneligible</i> overrides product-level Drop Ship, Collective, or Autoship only.<br><b>Active Rep Tags:</b> '+escHtml((data.valid_rep_tags||[]).join(', '))+'<br>Last refresh: '+escHtml(data.generated||'—')+'</div>'
     +'<div class="slbl">Commission Rules</div><div class="rules-grid">'
-    +'<div class="rule-card"><div class="rule-lbl">New Customer</div><div class="rule-val" style="color:var(--green)">12%</div><div class="rule-desc">First historical order</div></div>'
-    +'<div class="rule-card"><div class="rule-lbl">Recurring</div><div class="rule-val" style="color:var(--amber)">8%</div><div class="rule-desc">Customer has prior orders</div></div>'
-    +'<div class="rule-card"><div class="rule-lbl">JW / Swede Venture</div><div class="rule-val">1%</div><div class="rule-desc">Configured customer only</div></div>'
-    +'<div class="rule-card"><div class="rule-lbl">Actual Subscription / Excluded</div><div class="rule-val" style="color:var(--dim)">0%</div><div class="rule-desc">Subscription order, CJ, returns, and hard exclusions</div></div></div>'
-    +'<div class="slbl">Summary — Select a Rep for Details</div><table class="ov-table"><thead><tr><th>Rep</th><th>Gross Sales</th><th>Net Sales</th><th>New (12%)</th><th>Recurring (8%)</th><th>Special (1%)</th><th>Excluded / Returns</th><th>Duo Tags</th><th>Commission</th></tr></thead><tbody>'+rows+'</tbody>'
-    +'<tfoot><tr class="tfoot-row"><td>TOTAL · '+reps.length+' reps</td><td class="mono">'+fmt(totGross)+'</td><td class="mono">'+fmt(totNet)+'</td><td class="mono">'+fmt(totNew)+'</td><td class="mono">'+fmt(totRec)+'</td><td class="mono">'+fmt(totSpecial)+'</td><td class="mono">'+fmt(totExcl)+'</td><td class="tag-list '+(totDuo>0?'tag-duo':'')+'">'+(totDuo?totDuo+' line(s)':'—')+'</td><td class="comm-val">'+fmt(totComm)+'</td></tr></tfoot></table>'
-    +'<div class="det-panel" id="detailPanel"></div><div class="footer"><span>Secure architecture:</span> Shopify credentials remain in GitHub Actions Secrets. GitHub Pages receives only the generated commission data required by this report.<br><span>Subscription:</span> customer tags are not used as automatic exclusion. Exact order/line subscription evidence is required.<br><span>Data source:</span> Shopify Admin API · '+escHtml(data.generated)+'</div>';
+    +'<div class="rule-card"><div class="rule-icon">🆕</div><div class="rule-lbl">New Customer</div><div class="rule-val" style="color:var(--green)">12%</div><div class="rule-desc">Customer first order</div></div>'
+    +'<div class="rule-card"><div class="rule-icon">🔁</div><div class="rule-lbl">Recurring</div><div class="rule-val" style="color:var(--amber)">8%</div><div class="rule-desc">Customer has prior orders</div></div>'
+    +'<div class="rule-card"><div class="rule-icon">⭐</div><div class="rule-lbl">JW / Swede Venture</div><div class="rule-val">1%</div><div class="rule-desc">Configured customer only</div></div>'
+    +'<div class="rule-card"><div class="rule-icon">🔗</div><div class="rule-lbl">CJ Affiliate</div><div class="rule-val" style="color:var(--dim)">0%</div><div class="rule-desc">Affiliate channel handled separately</div></div>'
+    +'<div class="rule-card"><div class="rule-icon">⛔</div><div class="rule-lbl">Excluded</div><div class="rule-val" style="color:var(--dim)">0%</div><div class="rule-desc">Actual subscription · Dropship · Collective · Autoship · Returns</div></div></div>'
+    +'<div class="slbl">Summary — Select a Rep for Details</div><table class="ov-table"><thead><tr><th>Rep</th><th>Gross Sales</th><th>Net Sales</th><th>New (12%)</th><th>Recurring (8%)</th><th>Special (1%)</th><th>Excluded / Returns</th><th>Duo Tags</th><th>Commission</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr class="tfoot-row"><td style="font-size:11px">TOTAL · '+reps.length+' reps</td><td class="mono">'+fmt(totGross)+'</td><td class="mono">'+fmt(totNet)+'</td><td class="mono">'+fmt(totNew)+'</td><td class="mono">'+fmt(totRec)+'</td><td class="mono">'+fmt(totSpecial)+'</td><td class="mono" style="color:var(--dim)">'+fmt(totExcl)+'</td><td class="tag-list '+(totDuo>0?'tag-duo':'')+'">'+(totDuo>0?totDuo+' line(s)':'—')+'</td><td class="comm-val">'+fmt(totComm)+'</td></tr></tfoot></table>'
+    +'<div class="det-panel" id="detailPanel"></div><div class="slbl" style="margin-top:8px">Tier System — Net Sales per Month</div><div class="tier-legend">'+tc('🌱','Starter','$0 – $999','12% / 8%<br>Base rates',false)+tc('🥉','Bronze','$1,000 – $2,499','+ Slack Badge<br>+ Weekly mention',false)+tc('🥈','Silver','$2,500 – $4,999','+ $50/mo Bonus<br>+ Priority assignments',true)+tc('🏆','Gold','$5,000 – $9,999','13% / 9%<br>+ $150 Bonus + $100 Gift',false)+tc('💎','Diamond','$10,000+','14% / 10%<br>+ $300 Bonus + Rev share',false)+'</div>'
+    +'<div class="footer"><span>Calculation:</span> Gross Sales = item price × quantity · Net Sales = Gross − Discounts<br><span>Subscription:</span> customer tag alone is not excluded; exact order/line subscription evidence is required<br><span>Data Source:</span> Shopify Admin API + Google Sheet rep tags · '+escHtml(data.generated||'—')+'</div>';
 }
-
-function toggleDuoOnly(){showDuoOnly=!!document.getElementById('duoOnlyChk').checked;if(activeRep!==null)togglePanel(activeRep,true);}
-function togglePanel(idx,forceOpen) {
+function tc(e,name,range,perks,active){return '<div class="tc'+(active?' hi':'')+'"><div class="tc-e">'+e+'</div><div class="tc-t">'+name+'</div><div class="tc-r">'+range+'</div><div class="tc-p">'+perks+'</div></div>';}
+function togglePanel(idx,forceOpen){
   var panel=document.getElementById('detailPanel'),rows=document.querySelectorAll('.ov-table tbody tr'),d=currentData.reps[idx];
   if(activeRep===idx&&!forceOpen){panel.classList.remove('open');rows.forEach(function(r){r.classList.remove('row-on');});activeRep=null;return;}
-  activeRep=idx;rows.forEach(function(r,i){r.classList.toggle('row-on',i===idx);});
-  var t=tierFor(d.net_sales),pct=tierPct(d.net_sales),displayOrders=showDuoOnly?d.orders.filter(function(o){return !!o.rep_tag_warning;}):d.orders;
-  var orows=displayOrders.map(function(o){
-    var isEx=o.type==='Excluded'||o.type==='Return';
-    var badge=o.type==='New'?'<span class="badge b-new">New 12%</span>':o.type==='Recurring'?'<span class="badge b-rec">Recurring 8%</span>':o.type==='Special 1%'?'<span class="badge" style="background:var(--surface2);color:var(--text)">Special 1%</span>':o.type==='Return'?'<span class="badge b-ex">Return</span>':'<span class="badge b-ex">Excluded</span>';
-    var reason=o.exclusion_reason?'<div class="excl-reason">Reason: '+escHtml(o.exclusion_reason)+'</div>':'';
-    var elig=o.eligible_reason?'<div class="elig-reason">Eligible: '+escHtml(o.eligible_reason)+'</div>':'';
-    return '<tr class="'+((isEx?'excl ':'')+(o.rep_tag_warning?'duo-row':''))+'"><td class="r"><div class="oid">'+escHtml(o.order_id)+'</div></td><td><div class="odate">'+fmtDate(o.order_date)+'</div></td><td><div class="cname">'+escHtml(o.customer||'N/A')+'</div></td><td><div class="'+(o.rep_tag_warning?'tag-list tag-duo':'tag-list')+'">'+fmtTags(o.customer_rep_tags||o.rep_tags)+'</div></td><td><div class="pname" title="'+escHtml(o.product)+'">'+escHtml(o.product)+'</div>'+reason+elig+'</td><td>'+badge+'</td><td class="r">'+fmt(o.gross)+'</td><td class="r">'+fmt(o.net)+'</td><td class="r">'+(o.rate>0?(o.rate*100).toFixed(0)+'%':'—')+'</td><td class="comm-cell">'+(o.commission>0?fmt(o.commission):'—')+'</td></tr>';
-  }).join('');
-  panel.innerHTML='<div class="ph"><div class="ph-rep">'+t.e+' '+escHtml(d.rep)+' <small>· '+t.name+'</small></div><div class="ph-metrics"><div><div class="pm-val">'+fmt(d.gross_sales)+'</div><div class="pm-lbl">Gross Sales</div></div><div><div class="pm-val">'+fmt(d.net_sales)+'</div><div class="pm-lbl">Net Sales</div></div><div><div class="pm-val" style="color:var(--accent)">'+fmt(d.commission)+'</div><div class="pm-lbl">Commission</div></div></div></div>'
-    +'<div class="pb"><div class="tp"><div class="tp-hdr"><span>'+t.e+' '+t.name+'</span><span class="tp-nums">'+fmt(d.net_sales)+' / '+(t.next?'$'+t.ceil.toLocaleString():'max')+'</span></div><div class="pbar-bg"><div class="pbar-fill" style="width:'+pct+'%"></div></div></div>'
-    +'<div class="splits"><div class="sc"><div class="sc-val" style="color:var(--green)">'+fmt(d.new_sales)+'</div><div class="sc-lbl">New 12% · '+fmt(d.new_sales*.12)+'</div></div><div class="sc"><div class="sc-val" style="color:var(--amber)">'+fmt(d.rec_sales)+'</div><div class="sc-lbl">Recurring 8% · '+fmt(d.rec_sales*.08)+'</div></div><div class="sc"><div class="sc-val">'+fmt(d.special_sales)+'</div><div class="sc-lbl">Special 1% · '+fmt(d.special_sales*.01)+'</div></div><div class="sc"><div class="sc-val" style="color:var(--dim)">'+fmt(d.excl_sales)+'</div><div class="sc-lbl">Excluded / Returns · $0</div></div></div>'
-    +'<div class="duo-filter"><label><input type="checkbox" id="duoOnlyChk" onchange="toggleDuoOnly()" '+(showDuoOnly?'checked':'')+'> Show Duo Customer Tags only</label></div><div class="slbl">Orders in Period</div><table class="ord-table"><thead><tr><th class="r">Order #</th><th>Date</th><th>Customer</th><th>Customer Tag</th><th>Product</th><th>Type</th><th class="r">Gross</th><th class="r">Net</th><th class="r">Rate</th><th class="r">Commission</th></tr></thead><tbody>'+orows+'</tbody></table></div>';
+  activeRep=idx;rows.forEach(function(r,i){r.classList.toggle('row-on',i===idx);});var t=tierFor(d.net_sales),pct=tierPct(d.net_sales),displayOrders=showDuoOnly?d.orders.filter(function(o){return !!o.rep_tag_warning;}):d.orders;
+  var orows=displayOrders.map(function(o){var isEx=o.type==='Excluded'||o.type==='Return';var badge=o.type==='New'?'<span class="badge b-new">New 12%</span>':o.type==='Recurring'?'<span class="badge b-rec">Recurring 8%</span>':o.type==='Special 1%'?'<span class="badge b-special">Special 1%</span>':o.type==='Return'?'<span class="badge b-ex">Return</span>':'<span class="badge b-ex">Excluded</span>';var reason=o.exclusion_reason?'<div class="excl-reason">Reason: '+escHtml(o.exclusion_reason)+'</div>':'';var elig=o.eligible_reason?'<div class="elig-reason">Eligible: '+escHtml(o.eligible_reason)+'</div>':'';var repTagsClass=o.rep_tag_warning?'tag-list tag-duo':'tag-list';var rowClass=(isEx?'excl ':'')+(o.rep_tag_warning?'duo-row':'');return '<tr class="'+rowClass+'"><td class="r"><div class="oid">'+escHtml(o.order_id)+'</div></td><td><div class="odate">'+fmtDate(o.order_date)+'</div></td><td><div class="cname">'+escHtml(o.customer||'N/A')+'</div></td><td><div class="'+repTagsClass+'">'+fmtTags(o.customer_rep_tags||o.rep_tags)+'</div></td><td><div class="pname" title="'+escHtml(o.product)+'">'+escHtml(o.product)+'</div>'+reason+elig+'</td><td>'+badge+'</td><td class="r">'+fmt(o.gross)+'</td><td class="r">'+fmt(o.net)+'</td><td class="r">'+(o.rate>0?(o.rate*100).toFixed(0)+'%':'—')+'</td><td class="comm-cell">'+(o.commission>0?fmt(o.commission):'—')+'</td></tr>';}).join('');
+  panel.innerHTML='<div class="ph"><div class="ph-rep">'+t.e+' '+escHtml(d.rep)+' <small>· '+t.name+'</small></div><div class="ph-metrics"><div><div class="pm-val">'+fmt(d.gross_sales)+'</div><div class="pm-lbl">Gross Sales</div></div><div><div class="pm-val">'+fmt(d.net_sales)+'</div><div class="pm-lbl">Net Sales</div></div><div><div class="pm-val" style="color:var(--accent)">'+fmt(d.commission)+'</div><div class="pm-lbl">Commission</div></div></div></div><div class="pb"><div class="tp"><div class="tp-hdr"><span>'+t.e+' '+t.name+'</span><span class="tp-nums">'+fmt(d.net_sales)+' / '+(t.next?'$'+t.ceil.toLocaleString():'max')+'</span></div><div class="pbar-bg"><div class="pbar-fill" style="width:'+pct+'%"></div></div><div class="tp-sub"><span>'+t.name+'</span><span>'+(t.next?fmt(t.nextAmt)+' to reach '+t.next:'Top tier')+'</span></div></div><div class="splits"><div class="sc"><div class="sc-val" style="color:var(--green)">'+fmt(d.new_sales)+'</div><div class="sc-lbl">New 12% · '+fmt(d.new_sales*.12)+'</div></div><div class="sc"><div class="sc-val" style="color:var(--amber)">'+fmt(d.rec_sales)+'</div><div class="sc-lbl">Recurring 8% · '+fmt(d.rec_sales*.08)+'</div></div><div class="sc"><div class="sc-val">'+fmt(d.special_sales)+'</div><div class="sc-lbl">Special 1% · '+fmt(d.special_sales*.01)+'</div></div><div class="sc"><div class="sc-val" style="color:var(--dim)">'+fmt(d.excl_sales)+'</div><div class="sc-lbl">Excluded / Returns · $0</div></div></div><div class="duo-filter"><label><input type="checkbox" id="duoOnlyChk" onchange="toggleDuoOnly()" '+(showDuoOnly?'checked':'')+'> Show Duo Customer Tags only</label></div><div class="slbl">Orders in Period</div>'+(showDuoOnly&&!displayOrders.length?'<div class="notice">No Duo Customer Tags found for this rep in this period.</div>':'')+'<table class="ord-table"><thead><tr><th class="r">Order #</th><th>Date</th><th>Customer</th><th>Customer Tag</th><th>Product</th><th>Type</th><th class="r">Gross</th><th class="r">Net</th><th class="r">Rate</th><th class="r">Commission</th></tr></thead><tbody>'+orows+'</tbody></table></div>';
   panel.classList.add('open');panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-
-buildPeriodOptions();
-(function(){var t=document.documentElement.getAttribute('data-theme');document.getElementById('themeBtn').textContent=t==='dark'?'Light':'Dark';})();
-loadData(false);
+buildMonthOptions();buildWeekOptions();loadData(true);
 </script>
+
 </body>
 </html>
