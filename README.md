@@ -1,42 +1,36 @@
 # Concierge Commissions — GitHub Pages
 
-Migración completa del dashboard de Google Apps Script a GitHub Actions + GitHub Pages.
-Apps Script deja de participar después de copiar las dos credenciales de Shopify a GitHub.
+Migración completa de Google Apps Script a GitHub Actions + GitHub Pages. Apps Script ya no participa.
 
-## Credenciales secretas
+## Fuente de datos
 
-Solo existen dos secretos del repositorio:
+- Shopify: órdenes, clientes, productos y comisiones.
+- Google Sheet de tags: columna A, desde la fila 2.
+- Google Sheet configurado: `1vj7bVmMg2irf_pyYGdUCcYApBsf9og2gUqQ06cn7mN4`, `gid=0`.
+
+La hoja debe estar compartida como **Cualquier persona con el enlace → Lector**. No requiere API key ni Service Account.
+
+## Únicos Secrets
+
+En `Settings → Secrets and variables → Actions` crear:
 
 - `SHOPIFY_STORE`
 - `SHOPIFY_TOKEN`
 
-No coloque el token en ningún archivo del repositorio.
+No guardar el token en archivos del repositorio.
 
-## Reglas incorporadas
+## Reglas
 
-- Cliente nuevo: 12%.
-- Cliente recurrente: 8%.
-- JW / Swede Venture Cost: 1% cuando se habilite en `config/special_customers.json`.
-- CJ Affiliate, devolución y suscripción real: 0%.
-- El tag general del cliente `subscription` ya no excluye compras normales.
-- Se considera suscripción real cuando la orden tiene un tag exacto de suscripción o el line item contiene selling plan / subscription ID.
-- `commissioneligible` continúa sobreescribiendo únicamente exclusiones de producto Dropship, Collective y Autoship.
+- New Customer: 12%.
+- Recurring: 8%.
+- Cliente especial JW / Swede Venture Cost: 1%, al habilitarlo en `config/special_customers.json`.
+- Suscripción real, CJ Affiliate y devoluciones: 0%.
+- El tag general del cliente `subscription` no excluye una compra normal.
+- `commissioneligible` solo puede sobreescribir exclusiones de producto Dropship, Collective o Autoship.
 
-## Archivos que debe editar
+## Configurar el cliente especial al 1%
 
-### `config/rep_tags.json`
-
-Coloque los tags activos de representantes Concierge:
-
-```json
-{
-  "rep_tags": ["LH", "NP"]
-}
-```
-
-### `config/special_customers.json`
-
-Abra el cliente JW en Shopify. Copie el número final de la URL `/customers/NUMERO` y reemplace el texto de ejemplo. Después cambie `enabled` a `true`:
+Editar `config/special_customers.json`, colocar el Customer ID real de Shopify y cambiar `enabled` a `true`:
 
 ```json
 {
@@ -52,17 +46,10 @@ Abra el cliente JW en Shopify. Copie el número final de la URL `/customers/NUME
 }
 ```
 
-El ID del cliente no es una credencial secreta. No se guarda en Actions Secrets.
-
-## Subir al repositorio
-
-Suba a la raíz del repositorio todo el contenido de este proyecto, incluyendo las carpetas ocultas `.github` y `.gitignore`.
-
-La estructura final debe ser:
+## Estructura
 
 ```text
 .github/workflows/update-dashboard.yml
-config/rep_tags.json
 config/special_customers.json
 docs/data/dashboard.json
 docs/index.html
@@ -72,43 +59,17 @@ README.md
 requirements.txt
 ```
 
-## Configurar GitHub Actions Secrets
+## Ejecución
 
-En el repositorio abra:
+1. Subir todos los archivos a la raíz del repositorio.
+2. Crear los dos Secrets.
+3. Abrir `Actions → Update and Deploy Concierge Dashboard → Run workflow`.
+4. En `Settings → Pages`, elegir **Source: GitHub Actions**.
 
-`Settings → Secrets and variables → Actions → New repository secret`
-
-Cree exactamente:
-
-1. `SHOPIFY_STORE` con el valor `equestrian-labs.myshopify.com`.
-2. `SHOPIFY_TOKEN` con un token privado vigente de Shopify.
-
-## Ejecutar
-
-Abra:
-
-`Actions → Update Concierge Dashboard → Run workflow`
-
-La Action consulta Shopify, calcula los datos y actualiza `docs/data/dashboard.json`. También se ejecuta automáticamente cada seis horas.
-
-## Publicar GitHub Pages
-
-Abra:
-
-`Settings → Pages`
-
-Seleccione:
-
-- Source: `Deploy from a branch`
-- Branch: `main`
-- Folder: `/docs`
-
-La dirección esperada para este repositorio será:
+Enlace esperado:
 
 `https://equestrian-labs-dashboard.github.io/Concierge-Commissions_Corro/`
 
-GitHub puede tardar unos minutos en publicar la primera versión.
-
 ## Seguridad
 
-El frontend nunca recibe `SHOPIFY_TOKEN`. GitHub Pages publica el dashboard y su JSON de resultados. Como el repositorio y Pages son públicos, los nombres, órdenes y montos incluidos en ese JSON también serán públicos. Para restringirlos se necesita un hosting con autenticación; GitHub Pages público no ofrece acceso privado al dashboard.
+GitHub Pages es público. El token queda oculto en Actions, pero el JSON publicado puede mostrar nombres, órdenes y montos. Para restringir esos datos se necesita hosting con autenticación.

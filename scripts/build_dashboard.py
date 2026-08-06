@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import hashlib
+import csv
+import io
 import json
 import os
 import sys
@@ -15,12 +16,18 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_PATH = ROOT / "docs" / "data" / "dashboard.json"
-REP_TAGS_PATH = ROOT / "config" / "rep_tags.json"
 SPECIAL_CUSTOMERS_PATH = ROOT / "config" / "special_customers.json"
 
-API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-01")
+API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-07")
 STORE = os.environ.get("SHOPIFY_STORE", "").strip()
 TOKEN = os.environ.get("SHOPIFY_TOKEN", "").strip()
+
+REP_TAGS_SHEET_ID = os.getenv(
+    "REP_TAGS_SHEET_ID",
+    "1vj7bVmMg2irf_pyYGdUCcYApBsf9og2gUqQ06cn7mN4",
+).strip()
+REP_TAGS_SHEET_GID = os.getenv("REP_TAGS_SHEET_GID", "0").strip()
+REP_TAGS_START_ROW = int(os.getenv("REP_TAGS_START_ROW", "2"))
 
 RATE_NEW = 0.12
 RATE_RECURRING = 0.08
@@ -89,22 +96,45 @@ def load_special_customers() -> tuple[set[str], set[str]]:
     return ids, emails
 
 
-def load_rep_tags() -> list[str]:
-    try:
-        payload = json.loads(REP_TAGS_PATH.read_text(encoding="utf-8"))
-        values = payload.get("rep_tags", [])
-    except (OSError, json.JSONDecodeError) as exc:
-        raise BuildError(f"Cannot read {REP_TAGS_PATH}: {exc}") from exc
+def fetch_rep_tags_from_google_sheet() -> list[str]:
+    """Read active Concierge rep tags from Google Sheet column A, row 2 onward."""
+    if not REP_TAGS_SHEET_ID:
+        raise BuildError("REP_TAGS_SHEET_ID is empty")
 
+    url = (
+        f"https://docs.google.com/spreadsheets/d/{REP_TAGS_SHEET_ID}/export"
+        f"?format=csv&gid={REP_TAGS_SHEET_GID}"
+    )
+    try:
+        response = requests.get(url, timeout=REQUEST_TIMEOUT)
+    except requests.RequestException as exc:
+        raise BuildError(f"Could not read Concierge rep tags Google Sheet: {exc}") from exc
+
+    if response.status_code != 200:
+        raise BuildError(
+            "Could not read Concierge rep tags Google Sheet "
+            f"(HTTP {response.status_code}). Share it as 'Anyone with the link - Viewer'."
+        )
+
+    rows = list(csv.reader(io.StringIO(response.text)))
     tags: list[str] = []
     seen: set[str] = set()
-    for raw in values:
-        tag = str(raw or "").strip().upper()
-        if tag and tag not in seen:
-            tags.append(tag)
-            seen.add(tag)
+    for row in rows[max(REP_TAGS_START_ROW - 1, 0):]:
+        if not row:
+            continue
+        tag = str(row[0] or "").strip().upper()
+        if not tag or tag in seen:
+            continue
+        tags.append(tag)
+        seen.add(tag)
+
     if not tags:
-        raise BuildError("config/rep_tags.json has no active rep tags")
+        raise BuildError(
+            "No Concierge rep tags were found in Google Sheet column A "
+            f"starting at row {REP_TAGS_START_ROW}."
+        )
+
+    print(f"Active Concierge rep tags from Google Sheet: {', '.join(tags)}")
     return tags
 
 
@@ -406,7 +436,7 @@ def main() -> int:
     start = now - timedelta(days=LOOKBACK_DAYS)
     start_iso = start.strftime("%Y-%m-%dT%H:%M:%SZ")
     end_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    rep_tags = load_rep_tags()
+    rep_tags = fetch_rep_tags_from_google_sheet()
     special_ids, special_emails = load_special_customers()
     orders = fetch_orders(start_iso, end_iso)
 
@@ -425,6 +455,13 @@ def main() -> int:
         "lookback_start": start_iso,
         "lookback_end": end_iso,
         "valid_rep_tags": rep_tags,
+        "rep_tags_source": {
+            "type": "google_sheet",
+            "spreadsheet_id": REP_TAGS_SHEET_ID,
+            "gid": REP_TAGS_SHEET_GID,
+            "column": "A",
+            "start_row": REP_TAGS_START_ROW,
+        },
         "special_customer_rule_enabled": bool(special_ids or special_emails),
         "subscription_logic": "Exclude only actual subscription orders detected by exact order tags or line-item selling plan markers; customer subscription tags alone are not excluded.",
         **report,
