@@ -1,4 +1,4 @@
-name: Update Concierge Dashboard
+name: Update and Deploy Concierge Dashboard
 
 on:
   workflow_dispatch:
@@ -7,14 +7,20 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
-  group: concierge-dashboard-update
+  group: concierge-dashboard-pages
   cancel-in-progress: false
 
 jobs:
-  update:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,22 +34,45 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build sanitized dashboard data
+      - name: Validate required Shopify secrets
         env:
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
           SHOPIFY_TOKEN: ${{ secrets.SHOPIFY_TOKEN }}
-          SHOPIFY_API_VERSION: "2024-01"
+        run: |
+          test -n "$SHOPIFY_STORE" || (echo "Missing SHOPIFY_STORE secret" && exit 1)
+          test -n "$SHOPIFY_TOKEN" || (echo "Missing SHOPIFY_TOKEN secret" && exit 1)
+
+      - name: Build dashboard data
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_TOKEN: ${{ secrets.SHOPIFY_TOKEN }}
+          SHOPIFY_API_VERSION: "2026-07"
           LOOKBACK_DAYS: "190"
+          REP_TAGS_SHEET_ID: "1vj7bVmMg2irf_pyYGdUCcYApBsf9og2gUqQ06cn7mN4"
+          REP_TAGS_SHEET_GID: "0"
+          REP_TAGS_START_ROW: "2"
         run: python scripts/build_dashboard.py
 
-      - name: Commit refreshed data
+      - name: Commit refreshed dashboard data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/data/dashboard.json
           if git diff --cached --quiet; then
-            echo "No dashboard changes to commit."
+            echo "No dashboard data changes to commit."
           else
             git commit -m "Update concierge dashboard data"
             git push
           fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
