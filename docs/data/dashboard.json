@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "generated": "Sep 4, 2026 11:18 UTC",
-  "generated_iso": "2026-09-04T11:18:54.738543+00:00",
-  "lookback_start": "2026-02-26T11:18:54Z",
-  "lookback_end": "2026-09-04T11:18:54Z",
+  "generated": "Sep 4, 2026 16:21 UTC",
+  "generated_iso": "2026-09-04T16:21:59.046495+00:00",
+  "lookback_start": "2026-02-26T16:21:59Z",
+  "lookback_end": "2026-09-04T16:21:59Z",
   "valid_rep_tags": [
     "AW",
     "AV",
@@ -13850,12 +13850,12 @@
     },
     {
       "rep": "NP",
-      "gross_sales": 25005.86,
+      "gross_sales": 24969.87,
       "net_sales": 21620.83,
       "new_sales": 21620.83,
       "rec_sales": 0.0,
       "special_sales": 0.0,
-      "excl_sales": 1936.15,
+      "excl_sales": 1900.16,
       "commission": 2594.56,
       "duo_tag_count": 0,
       "duo_tag_combos": [],
@@ -18712,29 +18712,6 @@
           "ignored_rep_tags": "",
           "special_customer": false,
           "subscription_detected": false
-        },
-        {
-          "customer": "Victoria Manzitto",
-          "customer_id": "5190911393850",
-          "product": "Finish Line Apple-A-Day Electrolytes",
-          "order_id": "152073",
-          "order_date": "2026-02-26T09:15:34-05:00",
-          "net": 35.99,
-          "gross": 35.99,
-          "type": "Excluded",
-          "rate": 0.0,
-          "commission": 0.0,
-          "exclusion_reason": "subscription recurring order [Order Tag]",
-          "eligible_reason": null,
-          "order_tags": "Subscription, Subscription Recurring Order",
-          "rep_tags": "NP",
-          "rep_tag_count": 1,
-          "customer_rep_tags": "NP",
-          "order_rep_tags": "",
-          "rep_tag_warning": false,
-          "ignored_rep_tags": "",
-          "special_customer": false,
-          "subscription_detected": true
         }
       ]
     },
