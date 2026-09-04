@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "generated": "Sep 3, 2026 21:02 UTC",
-  "generated_iso": "2026-09-03T21:02:41.557198+00:00",
-  "lookback_start": "2026-02-25T21:02:41Z",
-  "lookback_end": "2026-09-03T21:02:41Z",
+  "generated": "Sep 4, 2026 04:34 UTC",
+  "generated_iso": "2026-09-04T04:34:22.794375+00:00",
+  "lookback_start": "2026-02-26T04:34:22Z",
+  "lookback_end": "2026-09-04T04:34:22Z",
   "valid_rep_tags": [
     "AW",
     "AV",
