@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "generated": "Sep 8, 2026 11:20 UTC",
-  "generated_iso": "2026-09-08T11:20:02.473130+00:00",
-  "lookback_start": "2026-03-02T11:20:02Z",
-  "lookback_end": "2026-09-08T11:20:02Z",
+  "generated": "Sep 8, 2026 16:39 UTC",
+  "generated_iso": "2026-09-08T16:39:01.129132+00:00",
+  "lookback_start": "2026-03-02T16:39:01Z",
+  "lookback_end": "2026-09-08T16:39:01Z",
   "valid_rep_tags": [
     "AW",
     "AV",
@@ -1298,12 +1298,12 @@
     },
     {
       "rep": "DG",
-      "gross_sales": 17973.21,
+      "gross_sales": 17939.92,
       "net_sales": 7640.16,
       "new_sales": 7640.16,
       "rec_sales": 0.0,
       "special_sales": 0.0,
-      "excl_sales": 9827.4,
+      "excl_sales": 9794.11,
       "commission": 916.85,
       "duo_tag_count": 3,
       "duo_tag_combos": [
@@ -5702,40 +5702,17 @@
           "ignored_rep_tags": "DG",
           "special_customer": false,
           "subscription_detected": true
-        },
-        {
-          "customer": "Janet Henigman",
-          "customer_id": "3210583179322",
-          "product": "AniMed Via Calm",
-          "order_id": "152108",
-          "order_date": "2026-03-02T09:15:54-05:00",
-          "net": 33.29,
-          "gross": 33.29,
-          "type": "Excluded",
-          "rate": 0.0,
-          "commission": 0.0,
-          "exclusion_reason": "subscription recurring order [Order Tag]",
-          "eligible_reason": null,
-          "order_tags": "Concierge, DG, Subscription, Subscription Recurring Order",
-          "rep_tags": "DG",
-          "rep_tag_count": 1,
-          "customer_rep_tags": "",
-          "order_rep_tags": "DG",
-          "rep_tag_warning": false,
-          "ignored_rep_tags": "",
-          "special_customer": false,
-          "subscription_detected": true
         }
       ]
     },
     {
       "rep": "JS",
-      "gross_sales": 12278.71,
+      "gross_sales": 12213.93,
       "net_sales": 6498.2,
       "new_sales": 6498.2,
       "rec_sales": 0.0,
       "special_sales": 0.0,
-      "excl_sales": 4662.75,
+      "excl_sales": 4597.97,
       "commission": 779.78,
       "duo_tag_count": 1,
       "duo_tag_combos": [
@@ -8501,29 +8478,6 @@
           "ignored_rep_tags": "",
           "special_customer": false,
           "subscription_detected": false
-        },
-        {
-          "customer": "Tess Davis",
-          "customer_id": "5243458060346",
-          "product": "exhibitor's QUIC SILVER Whitening Intensifier & Shampoo",
-          "order_id": "152107",
-          "order_date": "2026-03-02T09:00:55-05:00",
-          "net": 64.78,
-          "gross": 64.78,
-          "type": "Excluded",
-          "rate": 0.0,
-          "commission": 0.0,
-          "exclusion_reason": "subscription recurring order [Order Tag]",
-          "eligible_reason": null,
-          "order_tags": "Concierge, JS, Subscription, Subscription Recurring Order",
-          "rep_tags": "JS",
-          "rep_tag_count": 1,
-          "customer_rep_tags": "",
-          "order_rep_tags": "JS",
-          "rep_tag_warning": false,
-          "ignored_rep_tags": "JS",
-          "special_customer": false,
-          "subscription_detected": true
         }
       ]
     },
