@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "generated": "Sep 16, 2026 21:18 UTC",
-  "generated_iso": "2026-09-16T21:18:46.245711+00:00",
-  "lookback_start": "2026-03-10T21:18:46Z",
-  "lookback_end": "2026-09-16T21:18:46Z",
+  "generated": "Sep 17, 2026 04:53 UTC",
+  "generated_iso": "2026-09-17T04:53:58.394270+00:00",
+  "lookback_start": "2026-03-11T04:53:58Z",
+  "lookback_end": "2026-09-17T04:53:58Z",
   "valid_rep_tags": [
     "AW",
     "AV",
@@ -4957,18 +4957,41 @@
     },
     {
       "rep": "JS",
-      "gross_sales": 10376.21,
+      "gross_sales": 10626.21,
       "net_sales": 5394.85,
       "new_sales": 5394.85,
       "rec_sales": 0.0,
       "special_sales": 0.0,
-      "excl_sales": 4226.08,
+      "excl_sales": 4451.08,
       "commission": 647.38,
       "duo_tag_count": 1,
       "duo_tag_combos": [
         "JS, NP"
       ],
       "orders": [
+        {
+          "customer": "Amanda Alford",
+          "customer_id": "7897600884794",
+          "product": "Dandy Products Liverpool",
+          "order_id": "154716",
+          "order_date": "2026-09-16T18:17:22-04:00",
+          "net": 225.0,
+          "gross": 250.0,
+          "type": "Excluded",
+          "rate": 0.0,
+          "commission": 0.0,
+          "exclusion_reason": "drop_ship [Product Tag]",
+          "eligible_reason": null,
+          "order_tags": "",
+          "rep_tags": "JS",
+          "rep_tag_count": 1,
+          "customer_rep_tags": "JS",
+          "order_rep_tags": "",
+          "rep_tag_warning": false,
+          "ignored_rep_tags": "",
+          "special_customer": false,
+          "subscription_detected": false
+        },
         {
           "customer": "Deborah Phillips",
           "customer_id": "8276893761594",
